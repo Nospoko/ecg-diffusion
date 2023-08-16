@@ -22,14 +22,14 @@ def preprocess_dataset(dataset_name: str, batch_size: int, num_workers: int):
 
 if __name__ == "__main__":
     # load data
-    _, _, test_dataloader = preprocess_dataset("roszcz/ecg-segmentation-ltafdb", 128, 1)
+    _, _, test_dataloader = preprocess_dataset(dataset_name="roszcz/ecg-segmentation-ltafdb", batch_size=128, num_workers=1)
 
     # initialing random input
     records = next(iter(test_dataloader))
     signal = records["signal"]
     mask = records["mask"]
 
-    schedule_type = "sigmoid"
+    schedule_type = "cosine"
 
     # initialize forward diffusion
     fdiff = ForwardDiffusion(beta_start=0.0001, beta_end=0.02, timesteps=256, schedule_type=schedule_type)
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     signal = signal[idx]
 
     # timesteps for visualization
-    t = torch.tensor([0, 63, 127, 191, 255], dtype=torch.long)
+    t = torch.tensor([0, 10, 30, 63, 127, 255], dtype=torch.long)
 
     signals_list = []
 
