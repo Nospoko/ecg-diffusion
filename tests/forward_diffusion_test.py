@@ -22,16 +22,22 @@ def preprocess_dataset(dataset_name: str, batch_size: int, num_workers: int):
 
 if __name__ == "__main__":
     # load data
-    _, _, test_dataloader = preprocess_dataset("roszcz/ecg-segmentation-ltafdb", 4, 1)
+    _, _, test_dataloader = preprocess_dataset("roszcz/ecg-segmentation-ltafdb", 128, 1)
 
     # initialing random input
     records = next(iter(test_dataloader))
     signal = records["signal"]
+    mask = records["mask"]
 
     schedule_type = "sigmoid"
 
     # initialize forward diffusion
     fdiff = ForwardDiffusion(beta_start=0.0001, beta_end=0.02, timesteps=256, schedule_type=schedule_type)
+
+    # find signals where the are heartbeats
+    indices = torch.tensor([idx for idx in range(len(mask)) if mask[idx].sum() > 0], dtype=torch.long)
+    idx = indices[0:4]
+    signal = signal[idx]
 
     # timesteps for visualization
     t = torch.tensor([0, 63, 127, 191, 255], dtype=torch.long)
@@ -65,7 +71,7 @@ if __name__ == "__main__":
 
             # plot channels
             sns.lineplot(s[0], ax=ax)
-            sns.lineplot(s[1], ax=ax)
+            sns.lineplot(s[1], alpha=0.6, ax=ax)
             ax.set_title(plot_titles[j])
 
     plt.tight_layout()
