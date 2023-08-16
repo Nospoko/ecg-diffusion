@@ -1,10 +1,11 @@
-import matplotlib.pyplot as plt
-import seaborn as sns
 import torch
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
-from models.forward_diffusion import ForwardDiffusion
+
 from ecg_segmentation_dataset import ECGDataset
+from models.forward_diffusion import ForwardDiffusion
+
 
 def preprocess_dataset(dataset_name: str, batch_size: int, num_workers: int):
     train_ds = ECGDataset(dataset_name, split="train")
@@ -17,6 +18,7 @@ def preprocess_dataset(dataset_name: str, batch_size: int, num_workers: int):
     test_dataloader = DataLoader(test_ds, batch_size=batch_size, num_workers=num_workers)
 
     return train_dataloader, val_dataloader, test_dataloader
+
 
 if __name__ == "__main__":
     # load data
@@ -47,7 +49,6 @@ if __name__ == "__main__":
 
         # signals list: [[signal_1_t1, signal_1_t2, ...], [signal_2_t1, signal_2_t2, ...], ...]
         signals_list.append(diffused_list)
-
 
     # list of images to plot [original_img, transformed_img, diffused_imgs_0, ...]
     plot_titles = [f"diffusion step: {t[i]}" for i in range(len(t))]
