@@ -1,3 +1,3 @@
-from models import forward_diffusion
+from models import modules, forward_diffusion, reverse_diffusion
 
-__all__ = ["forward_diffusion"]
+__all__ = ["modules", "forward_diffusion", "reverse_diffusion"]
