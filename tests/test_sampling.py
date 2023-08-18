@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from omegaconf import OmegaConf
+from huggingface_hub.file_download import hf_hub_download
 
 from sample import Generator
 from train import preprocess_dataset
@@ -89,7 +90,9 @@ def test_denoising_val_set(
 
 
 if __name__ == "__main__":
-    checkpoint = torch.load("checkpoints/ecg-diffusion-2023-08-18-11-00.ckpt")
+    checkpoint = torch.load(
+        hf_hub_download(repo_id="JasiekKaczmarczyk/ecg-diffusion", filename="ecg-diffusion-2023-08-18-11-00.ckpt")
+    )
 
     cfg = checkpoint["config"]
 
@@ -117,7 +120,7 @@ if __name__ == "__main__":
     gen = Generator(model, forward_diffusion)
 
     # test generation of fake data
-    # test_generation(gen, cfg, batch_size=4)
+    test_generation(gen, cfg, batch_size=4)
 
     # test if model is able to denoise slightly noisy val set
     test_denoising_val_set(forward_diffusion, gen, cfg, batch_size=4, timesteps=63)
