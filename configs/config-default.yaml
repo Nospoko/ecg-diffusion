@@ -30,7 +30,7 @@ models:
     beta_start: 0.0001
     beta_end: 0.02
     timesteps: 256
-    schedule_type: "cosine" # schedule type: cosine, linear, quadratic, sigmoid
+    schedule_type: "sigmoid" # schedule type: cosine, linear, quadratic, sigmoid
 
 logger:
   run_name: ecg-diffusion-${now:%Y-%m-%d-%H-%M}
