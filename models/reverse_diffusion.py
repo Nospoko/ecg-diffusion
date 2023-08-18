@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-from models.modules.embedding import SinusoidalPositionEmbeddings
 from models.modules.attention_layers import MultiHeadAttention
+from models.modules.embedding import SinusoidalPositionEmbeddings
 from models.modules.conv_layers import PreNorm, Residual, Upsample, Downsample, ResnetBlock
 
 
@@ -50,7 +50,9 @@ class Unet(nn.Module):
         self.up = self._build_up_architecture()
 
         # final blocks
-        self.final_resnet_block = ResnetBlock(dim * 2, dim, kernel_size=kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups)
+        self.final_resnet_block = ResnetBlock(
+            dim * 2, dim, kernel_size=kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups
+        )
         self.final_conv = nn.Conv1d(dim, in_channels, kernel_size=1)
 
     def _build_down_architecture(self) -> nn.ModuleList:
@@ -62,8 +64,12 @@ class Unet(nn.Module):
             down.append(
                 nn.ModuleList(
                     [
-                        ResnetBlock(ins, ins, kernel_size=self.kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups),
-                        ResnetBlock(ins, ins, kernel_size=self.kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups),
+                        ResnetBlock(
+                            ins, ins, kernel_size=self.kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups
+                        ),
+                        ResnetBlock(
+                            ins, ins, kernel_size=self.kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups
+                        ),
                         Residual(PreNorm(ins, MultiHeadAttention(ins))),
                         Downsample(ins, outs) if not is_last else nn.Conv1d(ins, outs, kernel_size=3, padding=1),
                     ]
@@ -81,8 +87,20 @@ class Unet(nn.Module):
             up.append(
                 nn.ModuleList(
                     [
-                        ResnetBlock(outs + ins, outs, kernel_size=self.kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups),
-                        ResnetBlock(outs + ins, outs, kernel_size=self.kernel_size, time_emb_dim=self.time_dim, groups=self.resnet_block_groups),
+                        ResnetBlock(
+                            outs + ins,
+                            outs,
+                            kernel_size=self.kernel_size,
+                            time_emb_dim=self.time_dim,
+                            groups=self.resnet_block_groups,
+                        ),
+                        ResnetBlock(
+                            outs + ins,
+                            outs,
+                            kernel_size=self.kernel_size,
+                            time_emb_dim=self.time_dim,
+                            groups=self.resnet_block_groups,
+                        ),
                         Residual(PreNorm(outs, MultiHeadAttention(outs))),
                         Upsample(outs, ins) if not is_last else nn.Conv1d(outs, ins, kernel_size=3, padding=1),
                     ]

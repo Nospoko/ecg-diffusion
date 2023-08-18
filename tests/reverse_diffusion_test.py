@@ -6,24 +6,11 @@ from ecg_segmentation_dataset import ECGDataset
 
 from models.reverse_diffusion import Unet
 from models.forward_diffusion import ForwardDiffusion
-
-def preprocess_dataset(dataset_name: str, batch_size: int, num_workers: int):
-    train_ds = ECGDataset(dataset_name, split="train")
-    val_ds = ECGDataset(dataset_name, split="validation")
-    test_ds = ECGDataset(dataset_name, split="test")
-
-    # dataloaders
-    train_dataloader = DataLoader(train_ds, batch_size=batch_size, num_workers=num_workers)
-    val_dataloader = DataLoader(val_ds, batch_size=batch_size, num_workers=num_workers)
-    test_dataloader = DataLoader(test_ds, batch_size=batch_size, num_workers=num_workers)
-
-    return train_dataloader, val_dataloader, test_dataloader
+from train import preprocess_dataset
 
 if __name__ == "__main__":
     # initializing model
-    # checkpoint = torch.load(
-    #     hf_hub_download(repo_id="JasiekKaczmarczyk/ecg-segmentation-unet", filename="classification-2023-08-14-09-24.ckpt")
-    # )
+    checkpoint = torch.load("checkpoints/overfit-single-batch-2023-08-17-14-59.ckpt")
 
     # cfg = checkpoint["config"]
     schedule_type = "cosine"
@@ -40,7 +27,8 @@ if __name__ == "__main__":
         resnet_block_groups=4
     )
 
-    # model.load_state_dict(checkpoint["model"])
+    fdiff.load_state_dict(checkpoint["forward_diffusion"])
+    model.load_state_dict(checkpoint["model"])
 
     _, _, test_dataloader = preprocess_dataset("roszcz/ecg-segmentation-ltafdb", 4, 1)
 

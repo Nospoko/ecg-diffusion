@@ -1,0 +1,37 @@
+hydra:
+  job:
+    chdir: False
+
+train:
+  dataset_name: "roszcz/ecg-segmentation-ltafdb" # huggingface dataset
+  batch_size: 128
+  num_workers: 8
+  lr: 3e-4
+  weight_decay: 0.01
+  num_epochs: 1
+  device: "cuda"
+  precision: "16-mixed" # not implemented yet
+  overfit_single_batch: False
+
+paths:
+  save_ckpt_dir: "checkpoints" # directory where checkpoints will be saved
+  load_ckpt_path: null # if not None, specifies path to model state dict which will be loaded
+  log_dir: "logs"
+  hf_repo_id: null # repo id to upload model to huggingface if null model is not uploaded
+
+models:
+  unet:
+    in_out_channels: 2 # input and output channels
+    dim: 32 # initial number of unet channels (will be multiplied by dim_mults)
+    dim_mults: [1, 2, 4]
+    kernel_size: 7
+    num_resnet_groups: 4
+  forward_diffusion:
+    beta_start: 0.0001
+    beta_end: 0.02
+    timesteps: 256
+    schedule_type: "cosine" # schedule type: cosine, linear, quadratic, sigmoid
+
+logger:
+  run_name: ecg-diffusion-${now:%Y-%m-%d-%H-%M}
+  log_every_n_steps: 50
