@@ -12,7 +12,9 @@ class Generator:
         self.timesteps = forward_diffusion.timesteps
 
     @torch.no_grad()
-    def sample(self, x: torch.Tensor, timesteps: int = None, intermediate_outputs: bool = False) -> torch.Tensor | dict[torch.Tensor]:
+    def sample(
+        self, x: torch.Tensor, timesteps: int = None, intermediate_outputs: bool = False
+    ) -> torch.Tensor | dict[torch.Tensor]:
         """
         Sample ECG signal
 

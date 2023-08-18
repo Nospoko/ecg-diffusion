@@ -1,12 +1,10 @@
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
-from ecg_segmentation_dataset import ECGDataset
 
+from train import preprocess_dataset
 from models.reverse_diffusion import Unet
 from models.forward_diffusion import ForwardDiffusion
-from train import preprocess_dataset
 
 if __name__ == "__main__":
     # initializing model
@@ -18,14 +16,7 @@ if __name__ == "__main__":
     # initialize forward diffusion
     fdiff = ForwardDiffusion(beta_start=0.0001, beta_end=0.02, timesteps=256, schedule_type=schedule_type)
 
-    model = Unet(
-        in_channels=2,
-        out_channels=2,
-        dim=32,
-        dim_mults=(1, 2, 4),
-        kernel_size=7,
-        resnet_block_groups=4
-    )
+    model = Unet(in_channels=2, out_channels=2, dim=32, dim_mults=(1, 2, 4), kernel_size=7, resnet_block_groups=4)
 
     fdiff.load_state_dict(checkpoint["forward_diffusion"])
     model.load_state_dict(checkpoint["model"])
@@ -36,7 +27,7 @@ if __name__ == "__main__":
     record = next(iter(test_dataloader))
     signal = record["signal"]
     # sample random timestep
-    t = torch.randint(0, 255, size=(len(signal), ))
+    t = torch.randint(0, 255, size=(len(signal),))
     # mask = record["mask"]
 
     # diffusion
@@ -57,18 +48,17 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(len(signal), 3, figsize=(15, 7))
     fig.suptitle("Reverse diffusion (model not trained)", fontsize=16)
 
-
     for i, ax in enumerate(axes):
         sns.lineplot(signal[i, 0], ax=axes[i, 0])
         sns.lineplot(signal[i, 1], alpha=0.6, ax=axes[i, 0])
         axes[i, 0].set_title("Signal")
 
         sns.lineplot(diffused_signal[i, 0], ax=axes[i, 1])
-        sns.lineplot(diffused_signal[i, 1], alpha=0.6,  ax=axes[i, 1])
+        sns.lineplot(diffused_signal[i, 1], alpha=0.6, ax=axes[i, 1])
         axes[i, 1].set_title(f"Diffused signal at timestep {t[i]}")
 
         sns.lineplot(pred_noise[i, 0], ax=axes[i, 2])
-        sns.lineplot(pred_noise[i, 1], alpha=0.6,  ax=axes[i, 2])
+        sns.lineplot(pred_noise[i, 1], alpha=0.6, ax=axes[i, 2])
         axes[i, 2].set_title(f"Predicted noise at timestep {t[i]}")
 
     plt.tight_layout()

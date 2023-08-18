@@ -1,12 +1,11 @@
 import torch
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 
+from sample import Generator
+from train import preprocess_dataset
 from models.reverse_diffusion import Unet
 from models.forward_diffusion import ForwardDiffusion
-from sample import Generator
-
-from train import preprocess_dataset
 
 if __name__ == "__main__":
     checkpoint = torch.load("checkpoints/overfit-single-batch-2023-08-17-20-25.ckpt")

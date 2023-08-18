@@ -2,17 +2,17 @@ import os
 
 import hydra
 import torch
-import torch.nn.functional as F
 import wandb
 from tqdm import tqdm
 import torch.optim as optim
+import torch.nn.functional as F
 from omegaconf import OmegaConf
 from huggingface_hub import upload_file
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import Subset, DataLoader
 
-from models.forward_diffusion import ForwardDiffusion
 from models.reverse_diffusion import Unet
 from ecg_segmentation_dataset import ECGDataset
+from models.forward_diffusion import ForwardDiffusion
 
 
 def makedir_if_not_exists(dir: str):
@@ -38,38 +38,46 @@ def preprocess_dataset(dataset_name: str, batch_size: int, num_workers: int, *, 
     return train_dataloader, val_dataloader, test_dataloader
 
 
-def step(model: Unet, forward_diffusion: ForwardDiffusion, batch: dict[str, torch.Tensor, torch.Tensor], device: torch.device, split: str = "train") -> dict:
-        x = batch["signal"].to(device)
+def step(
+    model: Unet,
+    forward_diffusion: ForwardDiffusion,
+    batch: dict[str, torch.Tensor, torch.Tensor],
+    device: torch.device,
+    split: str = "train",
+) -> dict:
+    x = batch["signal"].to(device)
 
-        batch_size = x.shape[0]
+    batch_size = x.shape[0]
 
-        # sample t
-        t = torch.randint(0, forward_diffusion.timesteps, size=(batch_size,), dtype=torch.long, device=device)
+    # sample t
+    t = torch.randint(0, forward_diffusion.timesteps, size=(batch_size,), dtype=torch.long, device=device)
 
-        # noise batch
-        x_noisy, added_noise = forward_diffusion(x, t)
+    # noise batch
+    x_noisy, added_noise = forward_diffusion(x, t)
 
-        # get predicted noise
-        predicted_noise = model(x_noisy, t)
+    # get predicted noise
+    predicted_noise = model(x_noisy, t)
 
-        # get loss value for batch
-        loss = F.mse_loss(predicted_noise, added_noise)
+    # get loss value for batch
+    loss = F.mse_loss(predicted_noise, added_noise)
 
-        metrics = {f"{split}/loss": loss}
+    metrics = {f"{split}/loss": loss}
 
-        return metrics
+    return metrics
+
 
 def save_checkpoint(model: Unet, forward_diffusion: ForwardDiffusion, optimizer: optim.Optimizer, cfg: OmegaConf, save_path: str):
     # saving models
     torch.save(
         {
-            "model": model.state_dict(), 
+            "model": model.state_dict(),
             "forward_diffusion": forward_diffusion.state_dict(),
-            "optimizer": optimizer.state_dict(), 
-            "config": cfg
-        }, 
-        f=save_path
+            "optimizer": optimizer.state_dict(),
+            "config": cfg,
+        },
+        f=save_path,
     )
+
 
 def upload_to_huggingface(ckpt_save_path: str, cfg: OmegaConf):
     # get huggingface token from environment variables
@@ -86,11 +94,11 @@ def train(cfg: OmegaConf):
     makedir_if_not_exists(cfg.paths.save_ckpt_dir)
 
     # dataset
-    train_dataloader, _, _ = preprocess_dataset(
+    train_dataloader, val_dataloader, _ = preprocess_dataset(
         dataset_name=cfg.train.dataset_name,
         batch_size=cfg.train.batch_size,
         num_workers=cfg.train.num_workers,
-        overfit_single_batch=cfg.train.overfit_single_batch
+        overfit_single_batch=cfg.train.overfit_single_batch,
     )
 
     # logger
@@ -132,6 +140,7 @@ def train(cfg: OmegaConf):
 
     # step counts for logging to wandb
     train_step_count = 0
+    val_step_count = 0
 
     for epoch in range(cfg.train.num_epochs):
         # train epoch
@@ -157,6 +166,23 @@ def train(cfg: OmegaConf):
 
                 # save model and optimizer states
                 save_checkpoint(unet, forward_diffusion, optimizer, cfg, save_path=save_path)
+
+        # val epoch
+        val_loop = tqdm(enumerate(val_dataloader), total=len(val_dataloader))
+
+        for batch_idx, batch in val_loop:
+            # metrics returns loss and additional metrics if specified in step function
+            metrics = step(unet, forward_diffusion, batch, device, split="val")
+
+            loss = metrics["val/loss"]
+
+            val_loop.set_postfix(loss=loss.item())
+
+            val_step_count += 1
+
+            if (batch_idx + 1) % cfg.logger.log_every_n_steps == 0:
+                # log metrics
+                wandb.log(metrics, step=val_step_count)
 
     # save model at the end of training
     save_checkpoint(unet, forward_diffusion, optimizer, cfg, save_path=save_path)
