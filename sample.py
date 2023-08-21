@@ -20,11 +20,14 @@ class Generator:
 
         Args:
             x (torch.Tensor): signal to denoise
-            timesteps (int, optional): timestep from which denoising starts if None denoising starts from forward_diffusion end timestep. Defaults to None.
-            intermediate_outputs (bool, optional): if True returns dict of intermediate outputs with timestep as key. Defaults to False.
+            timesteps (int, optional): timestep from which denoising starts 
+                if None denoising starts from forward_diffusion end timestep. Defaults to None.
+            intermediate_outputs (bool, optional): if True returns dict of intermediate outputs with timestep as key. 
+                Defaults to False.
 
         Returns:
-            torch.Tensor | dict[torch.Tensor]: if intermediate_outputs=False returns sampled signal if True returns dict of intermediate outputs
+            torch.Tensor | dict[torch.Tensor]: if intermediate_outputs=False returns sampled signal 
+                if True returns dict of intermediate outputs
         """
         outputs = {}
 

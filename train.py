@@ -38,13 +38,12 @@ def preprocess_dataset(dataset_name: str, batch_size: int, num_workers: int, *, 
     return train_dataloader, val_dataloader, test_dataloader
 
 
-def step(
+def forward_step(
     model: Unet,
     forward_diffusion: ForwardDiffusion,
     batch: dict[str, torch.Tensor, torch.Tensor],
     device: torch.device,
-    split: str = "train",
-) -> dict:
+) -> float:
     x = batch["signal"].to(device)
 
     batch_size = x.shape[0]
@@ -61,9 +60,7 @@ def step(
     # get loss value for batch
     loss = F.mse_loss(predicted_noise, added_noise)
 
-    metrics = {f"{split}/loss": loss}
-
-    return metrics
+    return loss
 
 
 def save_checkpoint(model: Unet, forward_diffusion: ForwardDiffusion, optimizer: optim.Optimizer, cfg: OmegaConf, save_path: str):
@@ -139,18 +136,16 @@ def train(cfg: OmegaConf):
     save_path = f"{cfg.paths.save_ckpt_dir}/{cfg.logger.run_name}.ckpt"
 
     # step counts for logging to wandb
-    train_step_count = 0
-    val_step_count = 0
+    step_count = 0
 
     for epoch in range(cfg.train.num_epochs):
         # train epoch
+        unet.train()
         train_loop = tqdm(enumerate(train_dataloader), total=len(train_dataloader))
 
         for batch_idx, batch in train_loop:
             # metrics returns loss and additional metrics if specified in step function
-            metrics = step(unet, forward_diffusion, batch, device, split="train")
-
-            loss = metrics["train/loss"]
+            loss = forward_step(unet, forward_diffusion, batch, device)
 
             optimizer.zero_grad()
             loss.backward()
@@ -158,31 +153,30 @@ def train(cfg: OmegaConf):
 
             train_loop.set_postfix(loss=loss.item())
 
-            train_step_count += 1
+            step_count += 1
 
             if (batch_idx + 1) % cfg.logger.log_every_n_steps == 0:
                 # log metrics
-                wandb.log(metrics, step=train_step_count)
+                wandb.log({"train/loss": loss.item()}, step=step_count)
 
                 # save model and optimizer states
                 save_checkpoint(unet, forward_diffusion, optimizer, cfg, save_path=save_path)
 
         # val epoch
+        unet.eval()
         val_loop = tqdm(enumerate(val_dataloader), total=len(val_dataloader))
+        loss_epoch = 0.0
+        
+        with torch.no_grad():
+            for batch_idx, batch in val_loop:
+                # metrics returns loss and additional metrics if specified in step function
+                loss = forward_step(unet, forward_diffusion, batch, device)
 
-        for batch_idx, batch in val_loop:
-            # metrics returns loss and additional metrics if specified in step function
-            metrics = step(unet, forward_diffusion, batch, device, split="val")
+                val_loop.set_postfix(loss=loss.item())
 
-            loss = metrics["val/loss"]
+                loss_epoch += loss.item()
 
-            val_loop.set_postfix(loss=loss.item())
-
-            val_step_count += 1
-
-            if (batch_idx + 1) % cfg.logger.log_every_n_steps == 0:
-                # log metrics
-                wandb.log(metrics, step=val_step_count)
+        wandb.log({"val/loss_epoch": loss_epoch / len(val_dataloader)}, step=epoch)
 
     # save model at the end of training
     save_checkpoint(unet, forward_diffusion, optimizer, cfg, save_path=save_path)
